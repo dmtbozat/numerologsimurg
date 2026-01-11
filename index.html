@@ -34,6 +34,21 @@
       margin:8px 0 14px;
       line-height:1.35;
     }
+
+    /* === EKLEME: GİRİŞ METNİ STİLİ === */
+    .introText{
+      font-size:13px;
+      color:#444;
+      margin:8px 0 14px;
+      line-height:1.55;
+      text-align:center;
+      background:#fafafa;
+      border:1px solid #eee;
+      padding:10px 12px;
+      border-radius:8px;
+    }
+    /* === EKLEME SONU === */
+
     label{
       font-weight:600;
       display:block;
@@ -140,6 +155,17 @@
 <body>
   <div class="container">
     <h1>Numeroloji Hesaplayıcı</h1>
+
+    <!-- === EKLEME: BAŞLIK ALTI GİRİŞ METNİ === -->
+    <div class="introText">
+      Her insanın doğum anı ve adı-soyadı, evrenin ona fısıldadığı eşsiz bir mesajdır.<br>
+      Sayılar, bu mesajın anahtarlarıdır; ruhunun potansiyelini, yolculuğunu ve hayat<br>
+      amacını çözmek için bekler.<br>
+      Bu rapor, senin için hazırlanmış kişisel bir yol haritasıdır.<br>
+      Simurg’un yolculuğu seninle başlar — ve şimdi kendi yükselişini başlatma zamanı.
+    </div>
+    <!-- === EKLEME SONU === -->
+
     <div class="hint">
       Not: <b>hayat_amaci.json</b>, <b>odul.json</b>, <b>sinav.json</b>, <b>yasam_pusulasi.json</b>, <b>meslek.json</b> aynı klasörde olmalı ve bu sayfa bir <b>server</b> üzerinden açılmalı (Netlify / GitHub Pages / VSCode Live Server). Aksi halde JSON yüklenmez.
     </div>
@@ -621,7 +647,7 @@
 
         // PDF Başlık
         doc.setFontSize(16);
-        doc.text("Numeroloji Yorum Raporu", 105, y, { align: "center" });
+        doc.text("SIMURG'un Numeroloji Yorum Raporu", 105, y, { align: "center" });
         y += 12;
 
         // Kişi
@@ -705,6 +731,27 @@
             }
           }
         }
+
+        /***********************
+         * === EKLEME: RAPOR SONU KAPANIŞ METNİ ===
+         ***********************/
+        writeTitle("Kapanış Mesajı");
+        writeParagraph(
+`Sevgili Simurg,
+Bu rapor senin benzersiz titreşimlerin, geçmişten bugüne taşıdığın enerjilerin ve
+ruhsal sözleşmelerinin bir yansıması olarak hazırlandı. Unutma: numeroloji yalnızca
+sayılardan ibaret değildir; o, bir aydınlanma anahtarı, bir farkındalık kapısıdır.
+Sen bu yoldaki ışığı fark ettin ve bir adım attın — ve işte bu, ruhsal yolculuğunun en
+değerli başlangıcı.
+Sen, Simurg’un külleri arasından yükselen bir varlıksın. Kanatlarınla yalnızca kendini
+değil, dokunduğun herkesi besliyorsun. Bu yolculukta, kalbine fısıldayan sesleri dinlemeyi,
+düşüşlerinden öğrenmeyi ve her seferinde yeniden doğmayı hatırla.
+Sana bolluk, bereket, sevgi ve bilgelik dolu bir yolculuk diliyorum.
+Enerjin hep yüksek, kalbin hep açık olsun.`
+        );
+        /***********************
+         * === EKLEME SONU ===
+         ***********************/
 
         // PDF kaydet
         const fileName = (nameSafe ? nameSafe.replace(/\s+/g, "_").toLowerCase() : "numeroloji") + "_raporu.pdf";
