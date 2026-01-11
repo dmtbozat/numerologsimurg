@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Numeroloji Hesaplayıcı</title>
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      background:#f5f5f5;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:100vh;
+      margin:0;
+      padding:16px;
+    }
+    .container{
+      background:#fff;
+      padding:24px 28px;
+      border-radius:10px;
+      box-shadow:0 4px 12px rgba(0,0,0,.1);
+      max-width:760px;
+      width:100%;
+    }
+    h1{
+      font-size:22px;
+      margin:0 0 16px;
+      text-align:center;
+    }
+    .hint{
+      font-size:12px;
+      color:#666;
+      margin:8px 0 14px;
+      line-height:1.35;
+    }
+    label{
+      font-weight:600;
+      display:block;
+      margin-top:12px;
+      margin-bottom:6px;
+    }
+    input[type="text"]{
+      width:100%;
+      padding:10px 12px;
+      font-size:14px;
+      border-radius:6px;
+      border:1px solid #ccc;
+      box-sizing:border-box;
+    }
+    button{
+      width:100%;
+      padding:10px 12px;
+      font-size:15px;
+      font-weight:600;
+      border-radius:6px;
+      border:none;
+      cursor:pointer;
+      margin-top:12px;
+    }
+    #calcBtn{
+      background:#1e88e5;
+      color:#fff;
+    }
+    #calcBtn:hover{
+      background:#1565c0;
+    }
+    #resetBtn{
+      background:#b0b0b0;
+      color:#000;
+    }
+    #resetBtn:hover{
+      background:#9a9a9a;
+    }
+    #pdfBtn{
+      background:#4caf50;
+      color:#fff;
+    }
+    #pdfBtn:hover{
+      background:#388e3c;
+    }
+    .statusLine{
+      margin-top:10px;
+      font-size:12px;
+      color:#555;
+      text-align:center;
+    }
+    .statusOk{
+      color:#2e7d32;
+      font-weight:700;
+    }
+    .statusBad{
+      color:#c62828;
+      font-weight:700;
+    }
+    .resultBox{
+      background:#f0f4ff;
+      padding:14px;
+      border-radius:6px;
+      margin-top:14px;
+    }
+    .resultTitle{
+      font-weight:bold;
+      font-size:15px;
+      margin-bottom:6px;
+    }
+    .resultSubtitle{
+      font-size:12px;
+      color:#555;
+      margin:6px 0 10px;
+      line-height:1.35;
+    }
+    .resultValue{
+      font-size:16px;
+      color:#1a237e;
+      font-weight:700;
+    }
+    .pinGrid{
+      margin-top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .pinRow{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+    }
+    .pinRow span{
+      font-size:13px;
+      color:#333;
+    }
+    .pinRow b{
+      font-size:16px;
+      color:#1a237e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Numeroloji Hesaplayıcı</h1>
+    <div class="hint">
+      Not: <b>hayat_amaci.json</b>, <b>odul.json</b>, <b>sinav.json</b>, <b>yasam_pusulasi.json</b>, <b>meslek.json</b> aynı klasörde olmalı ve bu sayfa bir <b>server</b> üzerinden açılmalı (Netlify / GitHub Pages / VSCode Live Server). Aksi halde JSON yüklenmez.
+    </div>
+
+    <label for="dogumTarihi">Doğum Tarihi (GG.AA.YYYY)</label>
+    <input type="text" id="dogumTarihi" placeholder="Örn: 01.01.1900" />
+
+    <label for="isim">İsim</label>
+    <input type="text" id="isim" placeholder="İsim girin" />
+
+    <label for="kizlik">Kızlık Soyadı (opsiyonel)</label>
+    <input type="text" id="kizlik" placeholder="Kızlık soyadı girin (isteğe bağlı)" />
+
+    <label for="soyad">Soyadı</label>
+    <input type="text" id="soyad" placeholder="Soyadı girin (boş bırakabilirsiniz)" />
+
+    <button id="calcBtn">Hesapla</button>
+    <button id="resetBtn">Reset</button>
+    <button id="pdfBtn">Yorumu PDF Olarak İndir</button>
+
+    <div class="statusLine" id="jsonStatus">
+      JSON durumu: <span class="statusBad">yükleniyor...</span>
+    </div>
+
+    <div class="resultBox">
+      <div class="resultTitle">Hayat Amacı</div>
+      <div class="resultValue" id="hayatAmaci"></div>
+    </div>
+
+    <div class="resultBox">
+      <div class="resultTitle">Ödül</div>
+      <div class="resultSubtitle">Hayat amacınızla uyumlandığınızda evrenin size sunduğu ödül</div>
+      <div class="resultValue" id="odul"></div>
+    </div>
+
+    <div class="resultBox">
+      <div class="resultTitle">Sınavları</div>
+      <div class="resultValue" id="sinavlarList"></div>
+    </div>
+
+    <!-- Meslekler -->
+    <div class="resultBox" id="mesleklerBox" style="display:none;">
+      <div class="resultTitle">Uygun Meslekler</div>
+      <div class="resultSubtitle">İsim + (kızlık varsa) kızlık + (varsa) soyad üzerinden hesaplanır.</div>
+      <div class="resultValue" id="mesleklerList"></div>
+    </div>
+
+    <div class="resultBox" id="yasamPusulasiBox" style="display:none;">
+      <div class="resultTitle">Yaşam Pusulası</div>
+      <div class="resultSubtitle">Doğum tarihinden otomatik hesaplanır.</div>
+      <div class="pinGrid">
+        <div class="pinRow"><span>1. Hane – Benlik İmajı</span><b id="pin1"></b></div>
+        <div class="pinRow"><span>2. Hane – Dış Dünyadaki Algı</span><b id="pin2"></b></div>
+        <div class="pinRow"><span>4. Hane – Zorlanma Anlarında Strateji</span><b id="pin4"></b></div>
+        <div class="pinRow"><span>6. Hane – Dengeyi Bulma Biçimi</span><b id="pin6"></b></div>
+        <div class="pinRow"><span>7. Hane – Huzur Alanı</span><b id="pin7"></b></div>
+        <div class="pinRow"><span>8. Hane – Güç Kaynağı</span><b id="pin8"></b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    /***********************
+     * 0) METİN TEMİZLEME (EKRAN + PDF)
+     ***********************/
+    function fixSpacedLetters(str) {
+      str = (str || "").trim();
+      const tokens = str.split(/\s+/);
+      if (tokens.length >= 8) {
+        const singleCharCount = tokens.filter(t => t.length === 1).length;
+        if (singleCharCount / tokens.length > 0.7) {
+          return tokens.join("");
+        }
+      }
+      return str;
+    }
+
+    function cleanTitleText(str) {
+      return fixSpacedLetters(
+        (str || "")
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+      );
+    }
+
+    function trToAscii(str) {
+      if (!str) return "";
+      const map = {
+        "ç":"c", "Ç":"C", "ğ":"g", "Ğ":"G", "ş":"s", "Ş":"S",
+        "ö":"o", "Ö":"O", "ü":"u", "Ü":"U", "ı":"i", "İ":"I"
+      };
+      return str.replace(/[çÇğĞşŞöÖüÜıİ]/g, ch => map[ch] || ch);
+    }
+
+    function cleanPdfText(str) {
+      return trToAscii(str || "")
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .replace(/[–—−]/g, "-")
+        .replace(/→/g, "->")
+        .replace(/[“”]/g, '"')
+        .replace(/[’‘]/g, "'")
+        .replace(/\r/g, "");
+    }
+
+    /***********************
+     * 1) HARF - SAYI MAP
+     ***********************/
+    const numberMap = {
+      A:1, B:2, C:3, Ç:3, D:4, E:5, F:6, G:7, Ğ:7, H:8, I:9, İ:9, J:1,
+      K:2, L:3, M:4, N:5, O:6, Ö:6, P:7, R:9, S:1, Ş:1, T:2, U:3, Ü:3,
+      V:4, Y:7, Z:8, W:5, Q:8, X:6
+    };
+
+    const vowels = "AEIİOÖUÜ";
+
+    const rows = [
+      { row: 1, letters: "AJSŞ" },
+      { row: 2, letters: "BKT" },
+      { row: 3, letters: "CÇLUÜ" },
+      { row: 4, letters: "DMV" },
+      { row: 5, letters: "ENW" },
+      { row: 6, letters: "FOÖX" },
+      { row: 7, letters: "GĞPY" },
+      { row: 8, letters: "HQZ" },
+      { row: 9, letters: "İIR" }
+    ];
+
+    /***********************
+     * 2) MASTER SAYILAR
+     ***********************/
+    const masterNumbers = new Set([11, 19, 22, 33]);
+
+    function sadeleştir(num) {
+      if (masterNumbers.has(num)) return num;
+      while (num > 9) {
+        num = num.toString().split("").reduce((a, b) => a + Number(b), 0);
+        if (masterNumbers.has(num)) return num;
+      }
+      return num;
+    }
+
+    /***********************
+     * 3) JSON STATUS
+     ***********************/
+    const jsonStatusEl = document.getElementById("jsonStatus");
+    function setJsonStatus(ok, msg) {
+      jsonStatusEl.innerHTML = `JSON durumu: <span class="${ok ? "statusOk" : "statusBad"}">${msg}</span>`;
+    }
+
+    /***********************
+     * 4) JSON YÜKLEME
+     ***********************/
+    let hayatAmaciData = {};
+    let hayatAmaciYuklendi = false;
+    let odulData = {};
+    let odulYuklendi = false;
+    let sinavData = {};
+    let sinavYuklendi = false;
+
+    let yasamPusulasiData = {};
+    let yasamPusulasiYuklendi = false;
+
+    // Meslek JSON (sadece dosyadan)
+    let meslekData = {};
+    let meslekYuklendi = false;
+
+    async function loadJson(name) {
+      const res = await fetch(name, { cache: "no-store" });
+      if (!res.ok) throw new Error(name + " HTTP " + res.status);
+      return await res.json();
+    }
+
+    (async () => {
+      try {
+        hayatAmaciData = await loadJson("hayat_amaci.json");
+        hayatAmaciYuklendi = true;
+
+        odulData = await loadJson("odul.json");
+        odulYuklendi = true;
+
+        sinavData = await loadJson("sinav.json");
+        sinavYuklendi = true;
+
+        yasamPusulasiData = await loadJson("yasam_pusulasi.json");
+        yasamPusulasiYuklendi = true;
+
+        // meslek.json
+        meslekData = await loadJson("meslek.json");
+        meslekYuklendi = true;
+
+        const allOk =
+          hayatAmaciYuklendi &&
+          odulYuklendi &&
+          sinavYuklendi &&
+          yasamPusulasiYuklendi &&
+          meslekYuklendi;
+
+        setJsonStatus(allOk, allOk ? "yüklendi ✅" : "eksik/hatali ❌");
+      } catch (e) {
+        console.error("JSON yükleme hatası:", e);
+
+        // hangi dosya patladıysa status genel "yüklenemedi" olur
+        hayatAmaciYuklendi = hayatAmaciYuklendi && true;
+        odulYuklendi = odulYuklendi && true;
+        sinavYuklendi = sinavYuklendi && true;
+        yasamPusulasiYuklendi = yasamPusulasiYuklendi && true;
+        meslekYuklendi = meslekYuklendi && true;
+
+        setJsonStatus(false, "yüklenemedi ❌ (server gerekiyor)");
+      }
+    })();
+
+    /***********************
+     * 5) İSİM HESAPLAMA
+     ***********************/
+    function hesapSesli(str) {
+      let sum = 0;
+      for (let ch of str) if (vowels.includes(ch) && numberMap[ch]) sum += numberMap[ch];
+      return sadeleştir(sum);
+    }
+
+    function hesapSessiz(str) {
+      let sum = 0;
+      for (let ch of str) if (!vowels.includes(ch) && numberMap[ch]) sum += numberMap[ch];
+      return sadeleştir(sum);
+    }
+
+    function sinavBul(str) {
+      const chars = str.split("");
+      const sinavlar = [];
+      rows.forEach(r => {
+        const rowLetters = r.letters.split("");
+        const hasLetter = chars.some(ch => rowLetters.includes(ch));
+        if (!hasLetter) sinavlar.push(r.row);
+      });
+      return sinavlar;
+    }
+
+    /***********************
+     * MESLEK SAYISI HESAPLAMA
+     * - isim + kızlık + soyad (boşluklar yok)
+     * - numberMap üzerinden toplanır
+     * - sadeleştir ile master sayıları korur (11/19/22/33)
+     ***********************/
+    function hesapMeslekSayisi(fullStrUpperNoSpace){
+      let sum = 0;
+      for (const ch of (fullStrUpperNoSpace || "")) {
+        if (numberMap[ch]) sum += numberMap[ch];
+      }
+      return sadeleştir(sum);
+    }
+
+    /***********************
+     * 6) PIN HESAPLAMA (Excel yöntemi)
+     ***********************/
+    function sumDigits(n){
+      return String(n).split("").reduce((a,b)=>a + (Number(b)||0), 0);
+    }
+
+    function reduceToOneDigit(n){
+      while (n > 9) n = sumDigits(n);
+      return n;
+    }
+
+    function parseBirthDateTR(str){
+      const m = (str || "").trim().match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+      if(!m) return null;
+      const dd = Number(m[1]), mm = Number(m[2]), yyyy = Number(m[3]);
+      if(dd<1 || dd>31 || mm<1 || mm>12 || yyyy<1000) return null;
+      return { dd, mm, yyyy };
+    }
+
+    function hesapPinKodu(dogumStr){
+      const d = parseBirthDateTR(dogumStr);
+      if(!d) return null;
+      const h1 = reduceToOneDigit(d.dd);
+      const h2 = reduceToOneDigit(d.mm);
+      const h3 = reduceToOneDigit(sumDigits(d.yyyy));
+      const h4 = reduceToOneDigit(h1 + h2 + h3);
+      const h5 = reduceToOneDigit(h1 + h4);
+      const h6 = reduceToOneDigit(h1 + h2);
+      const h7 = reduceToOneDigit(h2 + h3);
+      const h8 = reduceToOneDigit(h6 + h7);
+      const h9 = reduceToOneDigit(h1+h2+h3+h4+h5+h6+h7+h8);
+      return { h1,h2,h3,h4,h5,h6,h7,h8,h9 };
+    }
+
+    /***********************
+     * 7) SON HESAPLANANLAR (PDF için)
+     ***********************/
+    let lastHayat = null, lastOdul = null, lastSinavlar = [], lastDisplayName = "";
+    let lastPin = null;
+
+    // Meslek (PDF için)
+    let lastMeslekSayisi = null;
+    let lastMeslekObj = null;
+
+    function hesapla() {
+      const dogumRaw = document.getElementById("dogumTarihi").value.trim();
+      const isimRaw = document.getElementById("isim").value.trim();
+      const kizlikRaw = document.getElementById("kizlik").value.trim();
+      const soyadRaw = document.getElementById("soyad").value.trim();
+
+      const hayatEl = document.getElementById("hayatAmaci");
+      const odulEl = document.getElementById("odul");
+      const sinavEl = document.getElementById("sinavlarList");
+
+      // temizle
+      hayatEl.textContent = "";
+      odulEl.textContent = "";
+      sinavEl.textContent = "";
+
+      // meslek temizle
+      const meslekBox = document.getElementById("mesleklerBox");
+      const meslekEl = document.getElementById("mesleklerList");
+      if (meslekBox) meslekBox.style.display = "none";
+      if (meslekEl) meslekEl.innerHTML = "";
+      lastMeslekSayisi = null;
+      lastMeslekObj = null;
+
+      // PIN görünümü
+      const pinBox = document.getElementById("yasamPusulasiBox");
+      pinBox.style.display = "none";
+      ["pin1","pin2","pin4","pin6","pin7","pin8"].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.textContent = "";
+      });
+
+      // doğum tarihi kontrol + pin bas
+      const pin = hesapPinKodu(dogumRaw);
+      if(pin){
+        lastPin = pin;
+        pinBox.style.display = "block";
+        document.getElementById("pin1").textContent = pin.h1;
+        document.getElementById("pin2").textContent = pin.h2;
+        document.getElementById("pin4").textContent = pin.h4;
+        document.getElementById("pin6").textContent = pin.h6;
+        document.getElementById("pin7").textContent = pin.h7;
+        document.getElementById("pin8").textContent = pin.h8;
+      } else {
+        lastPin = null;
+        if(dogumRaw){
+          hayatEl.textContent = "Doğum tarihi formatı GG.AA.YYYY olmalı (örn: 29.05.1988).";
+          lastHayat = null;
+          lastOdul = null;
+          lastSinavlar = [];
+          lastDisplayName = "";
+          return;
+        }
+      }
+
+      // isim-soyad kontrol
+      if (!isimRaw || (!kizlikRaw && !soyadRaw)) {
+        hayatEl.textContent = "İsim ve en az bir soyadı gereklidir.";
+        lastHayat = null;
+        lastOdul = null;
+        lastSinavlar = [];
+        lastDisplayName = "";
+        return;
+      }
+
+      const isim = isimRaw.toUpperCase();
+      const kizlik = kizlikRaw.toUpperCase();
+      const soyad = soyadRaw.toUpperCase();
+
+      // Hayat amacı / ödül: kızlık varsa isim+kızlık, yoksa isim+soyad
+      let hesapMetni = (kizlik ? (isim + kizlik) : (isim + soyad)).replace(/\s+/g, "");
+
+      // Sınavlar + Meslek: isim+kızlık+soyad
+      const fullStr = (isim + kizlik + soyad).replace(/\s+/g, "");
+
+      const hayat = hesapSesli(hesapMetni);
+      const odul = hesapSessiz(hesapMetni);
+      const sinavlar = sinavBul(fullStr);
+
+      // Meslek hesapla + göster
+      const meslekSayisi = hesapMeslekSayisi(fullStr);
+      lastMeslekSayisi = meslekSayisi;
+
+      const meslekObj = meslekData?.[String(meslekSayisi)];
+      lastMeslekObj = meslekObj || null;
+
+      if (meslekBox && meslekEl) {
+        meslekBox.style.display = "block";
+        if (!meslekYuklendi) {
+          meslekEl.textContent = "meslek.json yüklenmedi. (Server ile açtığından ve dosya adının doğru olduğundan emin ol.)";
+        } else if (meslekObj) {
+          const list = Array.isArray(meslekObj.meslekler) ? meslekObj.meslekler.join(", ") : "";
+          const acik = meslekObj.aciklama || "";
+          meslekEl.innerHTML = `
+            <div style="font-size:12px;color:#555;margin-bottom:6px;">
+              Meslek Sayısı: <b>${meslekSayisi}</b>
+            </div>
+            <div style="font-size:13px;color:#1a237e;font-weight:700;">${list}</div>
+            <div style="margin-top:8px;font-size:12px;color:#333;line-height:1.35;">${acik}</div>
+          `;
+        } else {
+          meslekEl.textContent = "Bu sayıya ait meslek bulunamadı.";
+        }
+      }
+
+      hayatEl.textContent = hayat;
+      odulEl.textContent = odul;
+      sinavEl.textContent = sinavlar.length ? sinavlar.join(", ") : "Yok";
+
+      // display name
+      let displayParts = [];
+      if (isimRaw) displayParts.push(isimRaw);
+      if (kizlikRaw) displayParts.push(kizlikRaw);
+      if (!kizlikRaw && soyadRaw) displayParts.push(soyadRaw);
+      if (kizlikRaw && soyadRaw) displayParts.push("(" + soyadRaw + ")");
+      lastDisplayName = displayParts.join(" ").replace(/\s+/g," ").trim();
+
+      lastHayat = hayat;
+      lastOdul = odul;
+      lastSinavlar = sinavlar;
+    }
+
+    /***********************
+     * 8) PDF OLUŞTURMA
+     ***********************/
+    async function indirPDF() {
+      try {
+        if (lastHayat === null || lastOdul === null) {
+          alert("Önce bir isim için hesaplama yap.");
+          return;
+        }
+        if (!hayatAmaciYuklendi) {
+          alert("hayat_amaci.json yüklenmedi (server üzerinden açılmalı).");
+          return;
+        }
+        if (!odulYuklendi) {
+          alert("odul.json yüklenmedi.");
+          return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setCharSpace(0);
+        doc.setFont("helvetica", "normal");
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const left = 20;
+        const rightWidth = 170;
+        const topMargin = 20;
+        const bottomMargin = 20;
+        let y = topMargin;
+
+        function ensureSpace(requiredHeight) {
+          if (y + requiredHeight > pageHeight - bottomMargin) {
+            doc.addPage();
+            doc.setCharSpace(0);
+            y = topMargin;
+          }
+        }
+
+        function writeTitle(text) {
+          ensureSpace(12);
+          doc.setFontSize(13);
+          const t = cleanPdfText(cleanTitleText(text));
+          doc.text(t, left, y);
+          y += 8;
+        }
+
+        function writeParagraph(blockText, fontSize = 11, lineHeight = 6, gapAfter = 6) {
+          const safe = cleanPdfText(blockText);
+          doc.setFontSize(fontSize);
+          const paragraphs = safe.split("\n\n");
+          for (const p of paragraphs) {
+            const lines = doc.splitTextToSize(p, rightWidth);
+            const h = lines.length * lineHeight + gapAfter;
+            ensureSpace(h);
+            doc.text(lines, left, y);
+            y += lines.length * lineHeight + gapAfter;
+          }
+        }
+
+        // PDF Başlık
+        doc.setFontSize(16);
+        doc.text("Numeroloji Yorum Raporu", 105, y, { align: "center" });
+        y += 12;
+
+        // Kişi
+        const nameSafe = cleanPdfText(lastDisplayName);
+        if (nameSafe) {
+          doc.setFontSize(12);
+          ensureSpace(10);
+          doc.text("Kisi: " + nameSafe, left, y);
+          y += 10;
+        }
+
+        // 1. Hayat Amacı
+        writeTitle("Hayat Amacı: " + String(lastHayat));
+        const hayatRaw = hayatAmaciData[String(lastHayat)] || "";
+        writeParagraph(hayatRaw);
+
+        // 2. Ödül
+        writeTitle("Ödül: " + String(lastOdul));
+        const odObj = odulData[String(lastOdul)] || {};
+        if (odObj.oz) writeParagraph("Odulun Ozu: " + odObj.oz);
+        if (odObj.degisim) writeParagraph("Hayat Nasil Degisir: " + odObj.degisim);
+
+        // 3. Sınav Açıklamaları
+        writeTitle("Sınav Açıklamaları");
+        if (!lastSinavlar.length) {
+          writeParagraph("(Sinav satiri yok.)");
+        } else if (!sinavYuklendi) {
+          writeParagraph("(sinav.json yüklenmedi)");
+        } else {
+          for (const s of lastSinavlar) {
+            const item = sinavData[String(s)];
+            const baslik = item?.baslik || ("Sinav " + s);
+            const aciklama = item?.aciklama || "(Aciklama bulunamadi)";
+            ensureSpace(8 + 4*6 + 8);
+            writeTitle(baslik);
+            writeParagraph(aciklama);
+          }
+        }
+
+        // Meslekler
+        writeTitle("Uygun Meslekler");
+        if (!lastMeslekSayisi) {
+          writeParagraph("(Meslek sayisi hesaplanamadi.)");
+        } else if (!meslekYuklendi) {
+          writeParagraph("(meslek.json yuklenmedi)");
+        } else if (!lastMeslekObj) {
+          writeParagraph("Meslek Sayisi: " + String(lastMeslekSayisi) + "\n(Bu sayi icin meslek verisi bulunamadi.)");
+        } else {
+          const list = Array.isArray(lastMeslekObj.meslekler) ? lastMeslekObj.meslekler.join(", ") : "";
+          const acik = lastMeslekObj.aciklama || "";
+          writeParagraph("Meslek Sayisi: " + String(lastMeslekSayisi));
+          if (list) writeParagraph("Meslekler: " + list);
+          if (acik) writeParagraph("Aciklama: " + acik);
+        }
+
+        // 4. Yaşam Pusulası
+        writeTitle("Yaşam Pusulası");
+        if (!lastPin) {
+          writeParagraph("(Doğum tarihi girilmediği için yaşam pusulası hesaplanamadı.)");
+        } else if (!yasamPusulasiYuklendi) {
+          writeParagraph("(yasam_pusulasi.json yüklenmedi)");
+        } else {
+          const mapping = [
+            { key: "benlik_imaji", label: "Benlik İmajı", val: lastPin.h1 },
+            { key: "dis_dunyadaki_algi", label: "Dış Dünyadaki Algı", val: lastPin.h2 },
+            { key: "zorlanma_stratejisi", label: "Zorlanma Stratejisi", val: lastPin.h4 },
+            { key: "dengeyi_bulma", label: "Dengeyi Bulma", val: lastPin.h6 },
+            { key: "huzur_alani", label: "Huzur Alanı", val: lastPin.h7 },
+            { key: "guc_kaynagi", label: "Güç Kaynağı", val: lastPin.h8 }
+          ];
+          for (const m of mapping) {
+            const num = String(m.val);
+            const item = yasamPusulasiData?.[m.key]?.[num];
+            writeTitle(m.label + ": " + num);
+            if (!item) {
+              writeParagraph("(Bu sayı için yorum bulunamadı.)");
+            } else {
+              const t = item.baslik ? (item.baslik + "\n") : "";
+              const a = item.aciklama || "";
+              writeParagraph(t + a);
+            }
+          }
+        }
+
+        // PDF kaydet
+        const fileName = (nameSafe ? nameSafe.replace(/\s+/g, "_").toLowerCase() : "numeroloji") + "_raporu.pdf";
+        doc.save(fileName);
+      } catch (e) {
+        console.error("PDF HATASI:", e);
+        alert("PDF üretilirken hata oldu. F12 > Console'a bak.");
+      }
+    }
+
+    /***********************
+     * 9) EVENTLER
+     ***********************/
+    document.getElementById("calcBtn").addEventListener("click", hesapla);
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("dogumTarihi").value = "";
+      document.getElementById("isim").value = "";
+      document.getElementById("kizlik").value = "";
+      document.getElementById("soyad").value = "";
+      document.getElementById("hayatAmaci").textContent = "";
+      document.getElementById("odul").textContent = "";
+      document.getElementById("sinavlarList").textContent = "";
+
+      // meslek reset
+      const meslekBox = document.getElementById("mesleklerBox");
+      const meslekEl = document.getElementById("mesleklerList");
+      if (meslekBox) meslekBox.style.display = "none";
+      if (meslekEl) meslekEl.innerHTML = "";
+      lastMeslekSayisi = null;
+      lastMeslekObj = null;
+
+      // yaşam pusulası kutusunu kapat
+      document.getElementById("yasamPusulasiBox").style.display = "none";
+      ["pin1","pin2","pin4","pin6","pin7","pin8"].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.textContent = "";
+      });
+
+      lastHayat = null;
+      lastOdul = null;
+      lastSinavlar = [];
+      lastDisplayName = "";
+      lastPin = null;
+    });
+
+    document.getElementById("pdfBtn").addEventListener("click", indirPDF);
+  </script>
+</body>
+</html>
