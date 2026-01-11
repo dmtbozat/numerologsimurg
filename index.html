@@ -650,6 +650,15 @@
         doc.text("SIMURG'un Numeroloji Yorum Raporu", 105, y, { align: "center" });
         y += 12;
 
+	writeParagraph(
+	`Her insanın doğum anı ve adı-soyadı, evrenin ona fısıldadığı eşsiz bir mesajdır.
+	Sayılar, bu mesajın anahtarlarıdır; ruhunun potansiyelini, yolculuğunu ve hayat
+	amacını çözmek için bekler.
+	Bu rapor, senin için hazırlanmış kişisel bir yol haritasıdır.
+	Simurg’un yolculuğu seninle başlar — ve şimdi kendi yükselişini başlatma zamanı.`,
+	11, 6, 8
+	);
+
         // Kişi
         const nameSafe = cleanPdfText(lastDisplayName);
         if (nameSafe) {
@@ -747,7 +756,9 @@ Sen, Simurg’un külleri arasından yükselen bir varlıksın. Kanatlarınla ya
 değil, dokunduğun herkesi besliyorsun. Bu yolculukta, kalbine fısıldayan sesleri dinlemeyi,
 düşüşlerinden öğrenmeyi ve her seferinde yeniden doğmayı hatırla.
 Sana bolluk, bereket, sevgi ve bilgelik dolu bir yolculuk diliyorum.
-Enerjin hep yüksek, kalbin hep açık olsun.`
+Enerjin hep yüksek, kalbin hep açık olsun.
+
+INSTAGRAM HESABI : @numerologsimurg`
         );
         /***********************
          * === EKLEME SONU ===
