@@ -592,153 +592,417 @@
      * 8) PDF OLUŞTURMA
      ***********************/
     async function indirPDF() {
-      try {
-        if (lastHayat === null || lastOdul === null) {
-          alert("Önce bir isim için hesaplama yap.");
-          return;
+  try {
+    if (lastHayat === null || lastOdul === null) {
+      alert("Önce bir isim için hesaplama yap.");
+      return;
+    }
+    if (!hayatAmaciYuklendi) {
+      alert("hayat_amaci.json yüklenmedi (server üzerinden açılmalı).");
+      return;
+    }
+    if (!odulYuklendi) {
+      alert("odul.json yüklenmedi.");
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+      orientation: "p",
+      unit: "mm",
+      format: "a4"
+    });
+
+    doc.setCharSpace(0);
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    const margin = 18;
+    const contentWidth = pageWidth - margin * 2;
+    const topMargin = 18;
+    const bottomMargin = 16;
+
+    let y = topMargin;
+    let pageNo = 1;
+
+    // Renk paleti
+    const COLORS = {
+      primary: [74, 47, 102],      // mor
+      secondary: [180, 145, 86],   // altın
+      text: [45, 45, 45],
+      muted: [110, 110, 110],
+      line: [225, 218, 230],
+      softBox: [248, 245, 250],
+      white: [255, 255, 255]
+    };
+
+    // -----------------------------------
+    // Yardımcılar
+    // -----------------------------------
+    function safeText(text) {
+      return cleanPdfText(String(text || ""));
+    }
+
+    function addPageBg() {
+      // çok hafif üst şerit
+      doc.setFillColor(...COLORS.primary);
+      doc.rect(0, 0, pageWidth, 8, "F");
+
+      // alt ince çizgi
+      doc.setDrawColor(...COLORS.line);
+      doc.setLineWidth(0.5);
+      doc.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10);
+    }
+
+    function drawHeader() {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(...COLORS.primary);
+      doc.text("SIMURG NUMEROLOJI RAPORU", margin, 13);
+    }
+
+    function drawFooter() {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...COLORS.muted);
+      doc.text(`Sayfa ${pageNo}`, pageWidth - margin, pageHeight - 6, { align: "right" });
+    }
+
+    function startNewPage() {
+      doc.addPage();
+      pageNo += 1;
+      addPageBg();
+      drawHeader();
+      drawFooter();
+      y = topMargin + 10;
+    }
+
+    function ensureSpace(requiredHeight = 10) {
+      if (y + requiredHeight > pageHeight - bottomMargin) {
+        startNewPage();
+      }
+    }
+
+    function drawDivider(spaceBefore = 3, spaceAfter = 6) {
+      ensureSpace(spaceBefore + spaceAfter + 2);
+      y += spaceBefore;
+      doc.setDrawColor(...COLORS.line);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += spaceAfter;
+    }
+
+    function writeSectionTitle(text) {
+      const title = safeText(text);
+      ensureSpace(14);
+
+      // sol vurgu çizgisi
+      doc.setFillColor(...COLORS.secondary);
+      doc.roundedRect(margin, y - 1.5, 3, 8, 1, 1, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(...COLORS.primary);
+      doc.text(title, margin + 7, y + 4);
+
+      y += 11;
+    }
+
+    function writeMiniLabel(label, value) {
+      ensureSpace(10);
+
+      doc.setFillColor(...COLORS.softBox);
+      doc.setDrawColor(...COLORS.line);
+      doc.roundedRect(margin, y, contentWidth, 10, 2, 2, "FD");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...COLORS.primary);
+      doc.text(safeText(label), margin + 4, y + 6.5);
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...COLORS.text);
+      doc.text(safeText(value), margin + 36, y + 6.5);
+
+      y += 14;
+    }
+
+    function writeParagraph(blockText, options = {}) {
+      const {
+        fontSize = 11,
+        lineHeight = 6,
+        gapAfter = 5,
+        color = COLORS.text,
+        indent = 0
+      } = options;
+
+      const safe = safeText(blockText);
+      const paragraphs = safe.split("\n\n").map(p => p.trim()).filter(Boolean);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(fontSize);
+      doc.setTextColor(...color);
+
+      for (const p of paragraphs) {
+        const lines = doc.splitTextToSize(p, contentWidth - indent);
+        const h = lines.length * lineHeight + gapAfter;
+        ensureSpace(h);
+        doc.text(lines, margin + indent, y);
+        y += lines.length * lineHeight + gapAfter;
+      }
+    }
+
+    function writeInfoCard(title, body) {
+      const cardPadding = 5;
+      const safeTitle = safeText(title);
+      const safeBody = safeText(body || "");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      const titleLines = doc.splitTextToSize(safeTitle, contentWidth - cardPadding * 2);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10.5);
+      const bodyLines = doc.splitTextToSize(safeBody, contentWidth - cardPadding * 2);
+
+      const cardHeight =
+        6 +
+        (titleLines.length * 5) +
+        2 +
+        (bodyLines.length * 5.5) +
+        5;
+
+      ensureSpace(cardHeight + 4);
+
+      doc.setFillColor(...COLORS.softBox);
+      doc.setDrawColor(...COLORS.line);
+      doc.roundedRect(margin, y, contentWidth, cardHeight, 3, 3, "FD");
+
+      let innerY = y + 6;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...COLORS.primary);
+      doc.text(titleLines, margin + cardPadding, innerY);
+
+      innerY += titleLines.length * 5 + 1;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10.5);
+      doc.setTextColor(...COLORS.text);
+      doc.text(bodyLines, margin + cardPadding, innerY);
+
+      y += cardHeight + 6;
+    }
+
+    async function tryAddLogo() {
+      // İstersen window.SIMURG_LOGO = "data:image/png;base64,..." diye dışarıdan basabilirsin.
+      // Ya da bu kısmı kendi logo değişkenine bağlayabilirsin.
+      if (window.SIMURG_LOGO) {
+        try {
+          doc.addImage(window.SIMURG_LOGO, "PNG", pageWidth / 2 - 15, 32, 30, 30);
+          return true;
+        } catch (e) {
+          console.warn("Logo eklenemedi:", e);
         }
-        if (!hayatAmaciYuklendi) {
-          alert("hayat_amaci.json yüklenmedi (server üzerinden açılmalı).");
-          return;
-        }
-        if (!odulYuklendi) {
-          alert("odul.json yüklenmedi.");
-          return;
-        }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.setCharSpace(0);
-        doc.setFont("helvetica", "normal");
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const left = 20;
-        const rightWidth = 170;
-        const topMargin = 20;
-        const bottomMargin = 20;
-        let y = topMargin;
+      }
+      return false;
+    }
 
-        function ensureSpace(requiredHeight) {
-          if (y + requiredHeight > pageHeight - bottomMargin) {
-            doc.addPage();
-            doc.setCharSpace(0);
-            y = topMargin;
-          }
-        }
+    async function addCoverPage() {
+      // kapak arka plan hissi
+      doc.setFillColor(250, 247, 252);
+      doc.rect(0, 0, pageWidth, pageHeight, "F");
 
-        function writeTitle(text) {
-          ensureSpace(12);
-          doc.setFontSize(13);
-          const t = cleanPdfText(cleanTitleText(text));
-          doc.text(t, left, y);
-          y += 8;
-        }
+      // üst bant
+      doc.setFillColor(...COLORS.primary);
+      doc.rect(0, 0, pageWidth, 22, "F");
 
-        function writeParagraph(blockText, fontSize = 11, lineHeight = 6, gapAfter = 6) {
-          const safe = cleanPdfText(blockText);
-          doc.setFontSize(fontSize);
-          const paragraphs = safe.split("\n\n");
-          for (const p of paragraphs) {
-            const lines = doc.splitTextToSize(p, rightWidth);
-            const h = lines.length * lineHeight + gapAfter;
-            ensureSpace(h);
-            doc.text(lines, left, y);
-            y += lines.length * lineHeight + gapAfter;
-          }
-        }
+      // alt vurgu çizgisi
+      doc.setFillColor(...COLORS.secondary);
+      doc.rect(0, pageHeight - 10, pageWidth, 10, "F");
 
-        // PDF Başlık
-        doc.setFontSize(16);
-        doc.text("SIMURG'un Numeroloji Yorum Raporu", 105, y, { align: "center" });
-        y += 12;
-writeParagraph(
-`Her insanın doğum anı ve adı-soyadı, evrenin ona fısıldadığı eşsiz bir mesajdır.
-Sayılar, bu mesajın anahtarlarıdır; ruhunun potansiyelini, yolculuğunu ve hayat
-amacını çözmek için bekler.
-Bu rapor, senin için hazırlanmış kişisel bir yol haritasıdır.
-Simurg’un yolculuğu seninle başlar — ve şimdi kendi yükselişini başlatma zamanı.`,
-11, 6, 10
-);
+      const hasLogo = await tryAddLogo();
 
-        // Kişi
-        const nameSafe = cleanPdfText(lastDisplayName);
-        if (nameSafe) {
-          doc.setFontSize(12);
-          ensureSpace(10);
-          doc.text("Kisi: " + nameSafe, left, y);
-          y += 10;
-        }
+      if (!hasLogo) {
+        // logo yoksa sade bir monogram alanı
+        doc.setDrawColor(...COLORS.secondary);
+        doc.setLineWidth(1);
+        doc.circle(pageWidth / 2, 48, 15);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.setTextColor(...COLORS.primary);
+        doc.text("S", pageWidth / 2, 50, { align: "center" });
+      }
 
-        // 1. Hayat Amacı
-        writeTitle("Hayat Amacı: " + String(lastHayat));
-        const hayatRaw = hayatAmaciData[String(lastHayat)] || "";
-        writeParagraph(hayatRaw);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(...COLORS.primary);
+      doc.text("Kisisel Numeroloji Raporu", pageWidth / 2, 78, { align: "center" });
 
-        // 2. Ödül
-        writeTitle("Ödül: " + String(lastOdul));
-        const odObj = odulData[String(lastOdul)] || {};
-        if (odObj.oz) writeParagraph("Odulun Ozu: " + odObj.oz);
-        if (odObj.degisim) writeParagraph("Hayat Nasil Degisir: " + odObj.degisim);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(...COLORS.muted);
+      doc.text("Simurg'un sana ozel hazirladigi yorum dosyasi", pageWidth / 2, 87, { align: "center" });
 
-        // 3. Sınav Açıklamaları
-        writeTitle("Sınav Açıklamaları");
-        if (!lastSinavlar.length) {
-          writeParagraph("(Sinav satiri yok.)");
-        } else if (!sinavYuklendi) {
-          writeParagraph("(sinav.json yüklenmedi)");
+      // danışan kutusu
+      const displayName = safeText(lastDisplayName || "Danisan");
+      doc.setFillColor(...COLORS.white);
+      doc.setDrawColor(...COLORS.line);
+      doc.roundedRect(28, 102, pageWidth - 56, 30, 4, 4, "FD");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...COLORS.secondary);
+      doc.text("HAZIRLANAN KISI", pageWidth / 2, 113, { align: "center" });
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(...COLORS.text);
+      doc.text(displayName, pageWidth / 2, 123, { align: "center" });
+
+      // giriş metni
+      const intro =
+`Her insanin dogum ani ve adi-soyadi, evrenin ona fisildadigi essiz bir mesaji tasir.
+Sayilar; potansiyelini, yasam yolunu ve ruhsal derslerini gorunur hale getirir.
+Bu rapor, kendi dogal gucunu daha net gormen ve hayat yolunda daha bilincli ilerlemen icin hazirlandi.`;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(...COLORS.text);
+      const introLines = doc.splitTextToSize(safeText(intro), 140);
+      doc.text(introLines, pageWidth / 2, 150, { align: "center" });
+
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(11);
+      doc.setTextColor(...COLORS.primary);
+      doc.text("Simurg'un yolculugu seninle baslar.", pageWidth / 2, 190, { align: "center" });
+    }
+
+    // -----------------------------------
+    // KAPAK
+    // -----------------------------------
+    await addCoverPage();
+
+    // -----------------------------------
+    // İÇ SAYFA BAŞLANGICI
+    // -----------------------------------
+    startNewPage();
+
+    writeSectionTitle("Rapor Ozeti");
+    writeMiniLabel("Danisan", lastDisplayName || "-");
+    writeMiniLabel("Hayat Amaci", String(lastHayat));
+    writeMiniLabel("Odul Sayisi", String(lastOdul));
+    if (lastMeslekSayisi) {
+      writeMiniLabel("Meslek Sayisi", String(lastMeslekSayisi));
+    }
+
+    drawDivider();
+
+    // 1) Hayat Amacı
+    writeSectionTitle("Hayat Amaci");
+    const hayatRaw = hayatAmaciData[String(lastHayat)] || "(Hayat amaci yorumu bulunamadi.)";
+    writeInfoCard(`Hayat Amaci Sayin: ${String(lastHayat)}`, hayatRaw);
+
+    // 2) Ödül
+    writeSectionTitle("Odul Enerjisi");
+    const odObj = odulData[String(lastOdul)] || {};
+
+    if (odObj.oz) {
+      writeInfoCard("Odulun Ozu", odObj.oz);
+    }
+    if (odObj.degisim) {
+      writeInfoCard("Hayatinda Nasil Bir Donusum Yaratir?", odObj.degisim);
+    }
+    if (!odObj.oz && !odObj.degisim) {
+      writeParagraph("(Odul verisi bulunamadi.)");
+    }
+
+    // 3) Sınavlar
+    writeSectionTitle("Sinav Aciklamalari");
+
+    if (!lastSinavlar.length) {
+      writeParagraph("(Sinav satiri yok.)");
+    } else if (!sinavYuklendi) {
+      writeParagraph("(sinav.json yuklenmedi)");
+    } else {
+      for (const s of lastSinavlar) {
+        const item = sinavData[String(s)];
+        const baslik = item?.baslik || ("Sinav " + s);
+        const aciklama = item?.aciklama || "(Aciklama bulunamadi)";
+        writeInfoCard(baslik, aciklama);
+      }
+    }
+
+    // 4) Meslekler
+    writeSectionTitle("Uygun Meslekler");
+
+    if (!lastMeslekSayisi) {
+      writeParagraph("(Meslek sayisi hesaplanamadi.)");
+    } else if (!meslekYuklendi) {
+      writeParagraph("(meslek.json yuklenmedi)");
+    } else if (!lastMeslekObj) {
+      writeParagraph(
+        `Meslek Sayisi: ${String(lastMeslekSayisi)}\n\n(Bu sayi icin meslek verisi bulunamadi.)`
+      );
+    } else {
+      const list = Array.isArray(lastMeslekObj.meslekler)
+        ? lastMeslekObj.meslekler.join(", ")
+        : "";
+      const acik = lastMeslekObj.aciklama || "";
+
+      writeInfoCard("Meslek Sayisi", String(lastMeslekSayisi));
+
+      if (list) {
+        writeInfoCard("Destekleyen Meslek Alanlari", list);
+      }
+      if (acik) {
+        writeInfoCard("Mesleki Yorum", acik);
+      }
+    }
+
+    // 5) Yaşam Pusulası
+    writeSectionTitle("Yasam Pusulasi");
+
+    if (!lastPin) {
+      writeParagraph("(Dogum tarihi girilmedigi icin yasam pusulasi hesaplanamadi.)");
+    } else if (!yasamPusulasiYuklendi) {
+      writeParagraph("(yasam_pusulasi.json yuklenmedi)");
+    } else {
+      const mapping = [
+        { key: "benlik_imaji", label: "Benlik Imaji", val: lastPin.h1 },
+        { key: "dis_dunyadaki_algi", label: "Dis Dunyadaki Algi", val: lastPin.h2 },
+        { key: "zorlanma_stratejisi", label: "Zorlanma Stratejisi", val: lastPin.h4 },
+        { key: "dengeyi_bulma", label: "Dengeyi Bulma", val: lastPin.h6 },
+        { key: "huzur_alani", label: "Huzur Alani", val: lastPin.h7 },
+        { key: "guc_kaynagi", label: "Guc Kaynagi", val: lastPin.h8 }
+      ];
+
+      for (const m of mapping) {
+        const num = String(m.val);
+        const item = yasamPusulasiData?.[m.key]?.[num];
+        const baslik = `${m.label}: ${num}`;
+
+        if (!item) {
+          writeInfoCard(baslik, "(Bu sayi icin yorum bulunamadi.)");
         } else {
-          for (const s of lastSinavlar) {
-            const item = sinavData[String(s)];
-            const baslik = item?.baslik || ("Sinav " + s);
-            const aciklama = item?.aciklama || "(Aciklama bulunamadi)";
-            ensureSpace(8 + 4*6 + 8);
-            writeTitle(baslik);
-            writeParagraph(aciklama);
-          }
+          const body = `${item.baslik ? item.baslik + "\n\n" : ""}${item.aciklama || ""}`;
+          writeInfoCard(baslik, body);
         }
+      }
+    }
 
-        // Meslekler
-        writeTitle("Uygun Meslekler");
-        if (!lastMeslekSayisi) {
-          writeParagraph("(Meslek sayisi hesaplanamadi.)");
-        } else if (!meslekYuklendi) {
-          writeParagraph("(meslek.json yuklenmedi)");
-        } else if (!lastMeslekObj) {
-          writeParagraph("Meslek Sayisi: " + String(lastMeslekSayisi) + "\n(Bu sayi icin meslek verisi bulunamadi.)");
-        } else {
-          const list = Array.isArray(lastMeslekObj.meslekler) ? lastMeslekObj.meslekler.join(", ") : "";
-          const acik = lastMeslekObj.aciklama || "";
-          writeParagraph("Meslek Sayisi: " + String(lastMeslekSayisi));
-          if (list) writeParagraph("Meslekler: " + list);
-          if (acik) writeParagraph("Aciklama: " + acik);
-        }
+    // Dosya adı
+    const fileNameBase = safeText(lastDisplayName || "numeroloji_raporu")
+      .replace(/[^a-zA-Z0-9_-]/g, "_");
 
-        // 4. Yaşam Pusulası
-        writeTitle("Yaşam Pusulası");
-        if (!lastPin) {
-          writeParagraph("(Doğum tarihi girilmediği için yaşam pusulası hesaplanamadı.)");
-        } else if (!yasamPusulasiYuklendi) {
-          writeParagraph("(yasam_pusulasi.json yüklenmedi)");
-        } else {
-          const mapping = [
-            { key: "benlik_imaji", label: "Benlik İmajı", val: lastPin.h1 },
-            { key: "dis_dunyadaki_algi", label: "Dış Dünyadaki Algı", val: lastPin.h2 },
-            { key: "zorlanma_stratejisi", label: "Zorlanma Stratejisi", val: lastPin.h4 },
-            { key: "dengeyi_bulma", label: "Dengeyi Bulma", val: lastPin.h6 },
-            { key: "huzur_alani", label: "Huzur Alanı", val: lastPin.h7 },
-            { key: "guc_kaynagi", label: "Güç Kaynağı", val: lastPin.h8 }
-          ];
-          for (const m of mapping) {
-            const num = String(m.val);
-            const item = yasamPusulasiData?.[m.key]?.[num];
-            writeTitle(m.label + ": " + num);
-            if (!item) {
-              writeParagraph("(Bu sayı için yorum bulunamadı.)");
-            } else {
-              const t = item.baslik ? (item.baslik + "\n") : "";
-              const a = item.aciklama || "";
-              writeParagraph(t + a);
-            }
-          }
-        }
+    doc.save(`${fileNameBase}_simurg_numeroloji_raporu.pdf`);
+  } catch (err) {
+    console.error(err);
+    alert("PDF olusturulurken bir hata olustu: " + (err?.message || err));
+  }
+}
 
         /***********************
          * === EKLEME: RAPOR SONU KAPANIŞ METNİ ===
