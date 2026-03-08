@@ -591,302 +591,154 @@
     /***********************
      * 8) PDF OLUŞTURMA
      ***********************/
-   async function indirPDF() {
-  try {
-    if (lastHayat === null || lastOdul === null) {
-      alert("Önce bir isim için hesaplama yap.");
-      return;
-    }
-    if (!hayatAmaciYuklendi) {
-      alert("hayat_amaci.json yüklenmedi (server üzerinden açılmalı).");
-      return;
-    }
-    if (!odulYuklendi) {
-      alert("odul.json yüklenmedi.");
-      return;
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({
-      orientation: "p",
-      unit: "mm",
-      format: "a4"
-    });
-
-    doc.setCharSpace(0);
-    doc.setFont("times", "normal");
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    const left = 18;
-    const right = 18;
-    const contentWidth = pageWidth - left - right;
-    const topMargin = 18;
-    const bottomMargin = 18;
-
-    let y = topMargin;
-
-    function ensureSpace(requiredHeight = 10) {
-      if (y + requiredHeight > pageHeight - bottomMargin) {
-        doc.addPage();
+    async function indirPDF() {
+      try {
+        if (lastHayat === null || lastOdul === null) {
+          alert("Önce bir isim için hesaplama yap.");
+          return;
+        }
+        if (!hayatAmaciYuklendi) {
+          alert("hayat_amaci.json yüklenmedi (server üzerinden açılmalı).");
+          return;
+        }
+        if (!odulYuklendi) {
+          alert("odul.json yüklenmedi.");
+          return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
         doc.setCharSpace(0);
-        doc.setFont("times", "normal");
-        y = topMargin;
-      }
-    }
+        doc.setFont("helvetica", "normal");
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const left = 20;
+        const rightWidth = 170;
+        const topMargin = 20;
+        const bottomMargin = 20;
+        let y = topMargin;
 
-    function drawDivider(spaceBefore = 2, spaceAfter = 5) {
-      y += spaceBefore;
-      ensureSpace(4);
-      doc.setDrawColor(210, 210, 210);
-      doc.setLineWidth(0.3);
-      doc.line(left, y, pageWidth - right, y);
-      y += spaceAfter;
-    }
-
-    function writeMainTitle(text) {
-      ensureSpace(16);
-      doc.setFont("times", "bold");
-      doc.setFontSize(18);
-      doc.text(cleanPdfText(text), pageWidth / 2, y, { align: "center" });
-      y += 9;
-    }
-
-    function writeSubIntro(text) {
-      const safe = cleanPdfText(text);
-      doc.setFont("times", "normal");
-      doc.setFontSize(11);
-      const lines = doc.splitTextToSize(safe, contentWidth);
-      const blockHeight = lines.length * 5.5 + 8;
-
-      ensureSpace(blockHeight);
-
-      doc.setDrawColor(225, 225, 225);
-      doc.setFillColor(250, 250, 250);
-      doc.roundedRect(left, y - 2, contentWidth, blockHeight, 2, 2, "FD");
-
-      doc.text(lines, pageWidth / 2, y + 4, { align: "center", maxWidth: contentWidth - 8 });
-      y += blockHeight + 4;
-    }
-
-    function writePersonInfo(name) {
-      if (!name) return;
-      ensureSpace(10);
-      doc.setFont("times", "italic");
-      doc.setFontSize(12);
-      doc.text("Kişi: " + cleanPdfText(name), left, y);
-      y += 8;
-    }
-
-    function writeSectionTitle(text) {
-      ensureSpace(10);
-      doc.setFont("times", "bold");
-      doc.setFontSize(14);
-      doc.text(cleanPdfText(cleanTitleText(text)), left, y);
-      y += 6;
-    }
-
-    function writeMiniLabel(text) {
-      ensureSpace(8);
-      doc.setFont("times", "bolditalic");
-      doc.setFontSize(11.5);
-      doc.text(cleanPdfText(text), left, y);
-      y += 5.5;
-    }
-
-    function writeParagraph(blockText, fontSize = 11, lineHeight = 5.5, gapAfter = 4.5) {
-      const safe = cleanPdfText(blockText || "");
-      const paragraphs = safe.split("\n\n");
-
-      doc.setFont("times", "normal");
-      doc.setFontSize(fontSize);
-
-      for (const p of paragraphs) {
-        const trimmed = p.trim();
-        if (!trimmed) continue;
-
-        const lines = doc.splitTextToSize(trimmed, contentWidth);
-        const h = lines.length * lineHeight + gapAfter;
-
-        ensureSpace(h);
-        doc.text(lines, left, y);
-        y += lines.length * lineHeight + gapAfter;
-      }
-    }
-
-    function writeBulletListFromCommaText(label, commaText) {
-      if (!commaText) return;
-      writeMiniLabel(label);
-
-      const items = commaText
-        .split(",")
-        .map(s => s.trim())
-        .filter(Boolean);
-
-      doc.setFont("times", "normal");
-      doc.setFontSize(11);
-
-      for (const item of items) {
-        const bulletText = "• " + cleanPdfText(item);
-        const lines = doc.splitTextToSize(bulletText, contentWidth - 4);
-        const h = lines.length * 5.2 + 1.5;
-        ensureSpace(h);
-        doc.text(lines, left + 2, y);
-        y += lines.length * 5.2 + 1.5;
-      }
-      y += 2;
-    }
-
-    const introText = `Her insanın doğum anı ve adı-soyadı, evrenin ona fısıldadığı eşsiz bir mesajdır.
-Sayılar, bu mesajın anahtarlarıdır; ruhunun potansiyelini, yolculuğunu ve hayat amacını çözmek için bekler.
-Bu rapor, senin için hazırlanmış kişisel bir yol haritasıdır.
-Simurg'un yolculuğu seninle başlar — ve şimdi kendi yükselişini başlatma zamanı.`;
-
-    const nameSafe = cleanPdfText(lastDisplayName);
-
-    writeMainTitle("SIMURG'un Numeroloji Yorum Raporu");
-    writeSubIntro(introText);
-    writePersonInfo(nameSafe);
-    drawDivider(0, 6);
-
-    // 1) Hayat Amacı
-    writeSectionTitle("Hayat Amacı: " + String(lastHayat));
-    const hayatRaw = hayatAmaciData[String(lastHayat)] || "(Açıklama bulunamadı)";
-    writeParagraph(hayatRaw, 11, 5.6, 4.5);
-
-    // 2) Ödül
-    drawDivider(1, 5);
-    writeSectionTitle("Ödül: " + String(lastOdul));
-    const odObj = odulData[String(lastOdul)] || {};
-    if (odObj.oz) {
-      writeMiniLabel("Ödülün Özü");
-      writeParagraph(odObj.oz, 11, 5.5, 4);
-    }
-    if (odObj.degisim) {
-      writeMiniLabel("Hayat Nasıl Değişir");
-      writeParagraph(odObj.degisim, 11, 5.5, 4.5);
-    }
-
-    // 3) Sınav Açıklamaları
-    drawDivider(1, 5);
-    writeSectionTitle("Sınav Açıklamaları");
-
-    if (!lastSinavlar.length) {
-      writeParagraph("(Sınav satırı yok.)");
-    } else if (!sinavYuklendi) {
-      writeParagraph("(sinav.json yüklenmedi)");
-    } else {
-      for (const s of lastSinavlar) {
-        const item = sinavData[String(s)];
-        const baslik = item?.baslik || ("Sınav " + s);
-        const aciklama = item?.aciklama || "(Açıklama bulunamadı)";
-
-        ensureSpace(14);
-        writeMiniLabel(baslik);
-        writeParagraph(aciklama, 11, 5.5, 5);
-      }
-    }
-
-    // 4) Uygun Meslekler
-    drawDivider(1, 5);
-    writeSectionTitle("Uygun Meslekler");
-
-    if (!lastMeslekSayisi) {
-      writeParagraph("(Meslek sayısı hesaplanamadı.)");
-    } else if (!meslekYuklendi) {
-      writeParagraph("(meslek.json yüklenmedi)");
-    } else if (!lastMeslekObj) {
-      writeParagraph("Meslek Sayısı: " + String(lastMeslekSayisi));
-      writeParagraph("(Bu sayı için meslek verisi bulunamadı.)");
-    } else {
-      const list = Array.isArray(lastMeslekObj.meslekler)
-        ? lastMeslekObj.meslekler.join(", ")
-        : "";
-      const acik = lastMeslekObj.aciklama || "";
-
-      writeMiniLabel("Meslek Sayısı");
-      writeParagraph(String(lastMeslekSayisi), 11, 5.5, 4);
-
-      if (list) {
-        writeBulletListFromCommaText("Meslekler", list);
-      }
-
-      if (acik) {
-        writeMiniLabel("Açıklama");
-        writeParagraph(acik, 11, 5.5, 4.5);
-      }
-    }
-
-    // 5) Yaşam Pusulası
-    drawDivider(1, 5);
-    writeSectionTitle("Yaşam Pusulası");
-
-    if (!lastPin) {
-      writeParagraph("(Doğum tarihi girilmediği için yaşam pusulası hesaplanamadı.)");
-    } else if (!yasamPusulasiYuklendi) {
-      writeParagraph("(yasam_pusulasi.json yüklenmedi)");
-    } else {
-      const mapping = [
-        { key: "benlik_imaji", label: "Benlik İmajı", val: lastPin.h1 },
-        { key: "dis_dunyadaki_algi", label: "Dış Dünyadaki Algı", val: lastPin.h2 },
-        { key: "zorlanma_stratejisi", label: "Zorlanma Stratejisi", val: lastPin.h4 },
-        { key: "dengeyi_bulma", label: "Dengeyi Bulma", val: lastPin.h6 },
-        { key: "huzur_alani", label: "Huzur Alanı", val: lastPin.h7 },
-        { key: "guc_kaynagi", label: "Güç Kaynağı", val: lastPin.h8 }
-      ];
-
-      for (const m of mapping) {
-        const num = String(m.val);
-        const item = yasamPusulasiData?.[m.key]?.[num];
-
-        ensureSpace(12);
-        writeMiniLabel(m.label + ": " + num);
-
-        if (!item) {
-          writeParagraph("(Bu sayı için yorum bulunamadı.)");
-        } else {
-          if (item.baslik) {
-            writeParagraph(item.baslik, 11, 5.4, 2.5);
-          }
-          if (item.aciklama) {
-            writeParagraph(item.aciklama, 11, 5.5, 4.5);
+        function ensureSpace(requiredHeight) {
+          if (y + requiredHeight > pageHeight - bottomMargin) {
+            doc.addPage();
+            doc.setCharSpace(0);
+            y = topMargin;
           }
         }
-      }
-    }
 
-    // 6) Kapanış
-    drawDivider(1, 5);
-    writeSectionTitle("Kapanış Mesajı");
+        function writeTitle(text) {
+          ensureSpace(12);
+          doc.setFontSize(13);
+          const t = cleanPdfText(cleanTitleText(text));
+          doc.text(t, left, y);
+          y += 8;
+        }
 
-    const kapanis = `Sevgili Simurg,
+        function writeParagraph(blockText, fontSize = 11, lineHeight = 6, gapAfter = 6) {
+          const safe = cleanPdfText(blockText);
+          doc.setFontSize(fontSize);
+          const paragraphs = safe.split("\n\n");
+          for (const p of paragraphs) {
+            const lines = doc.splitTextToSize(p, rightWidth);
+            const h = lines.length * lineHeight + gapAfter;
+            ensureSpace(h);
+            doc.text(lines, left, y);
+            y += lines.length * lineHeight + gapAfter;
+          }
+        }
 
-Bu rapor senin benzersiz titreşimlerin, geçmişten bugüne taşıdığın enerjilerin ve ruhsal sözleşmelerinin bir yansıması olarak hazırlandı. Unutma: numeroloji yalnızca sayılardan ibaret değildir; o, bir aydınlanma anahtarı, bir farkındalık kapısıdır.
+        // PDF Başlık
+        doc.setFontSize(16);
+        doc.text("SIMURG'un Numeroloji Yorum Raporu", 105, y, { align: "center" });
+        y += 12;
+writeParagraph(
+`Her insanın doğum anı ve adı-soyadı, evrenin ona fısıldadığı eşsiz bir mesajdır.
+Sayılar, bu mesajın anahtarlarıdır; ruhunun potansiyelini, yolculuğunu ve hayat
+amacını çözmek için bekler.
+Bu rapor, senin için hazırlanmış kişisel bir yol haritasıdır.
+Simurg’un yolculuğu seninle başlar — ve şimdi kendi yükselişini başlatma zamanı.`,
+11, 6, 10
+);
 
-Sen bu yoldaki ışığı fark ettin ve bir adım attın — ve işte bu, ruhsal yolculuğunun en değerli başlangıcı.
+        // Kişi
+        const nameSafe = cleanPdfText(lastDisplayName);
+        if (nameSafe) {
+          doc.setFontSize(12);
+          ensureSpace(10);
+          doc.text("Kisi: " + nameSafe, left, y);
+          y += 10;
+        }
 
-Sen, Simurg'un külleri arasından yükselen bir varlıksın. Kanatlarınla yalnızca kendini değil, dokunduğun herkesi besliyorsun. Bu yolculukta, kalbine fısıldayan sesleri dinlemeyi, düşüşlerinden öğrenmeyi ve her seferinde yeniden doğmayı hatırla.
+        // 1. Hayat Amacı
+        writeTitle("Hayat Amacı: " + String(lastHayat));
+        const hayatRaw = hayatAmaciData[String(lastHayat)] || "";
+        writeParagraph(hayatRaw);
 
-Sana bolluk, bereket, sevgi ve bilgelik dolu bir yolculuk diliyorum.
-Enerjin hep yüksek, kalbin hep açık olsun.
+        // 2. Ödül
+        writeTitle("Ödül: " + String(lastOdul));
+        const odObj = odulData[String(lastOdul)] || {};
+        if (odObj.oz) writeParagraph("Odulun Ozu: " + odObj.oz);
+        if (odObj.degisim) writeParagraph("Hayat Nasil Degisir: " + odObj.degisim);
 
-Instagram Hesabı: @numerologsimurg`;
+        // 3. Sınav Açıklamaları
+        writeTitle("Sınav Açıklamaları");
+        if (!lastSinavlar.length) {
+          writeParagraph("(Sinav satiri yok.)");
+        } else if (!sinavYuklendi) {
+          writeParagraph("(sinav.json yüklenmedi)");
+        } else {
+          for (const s of lastSinavlar) {
+            const item = sinavData[String(s)];
+            const baslik = item?.baslik || ("Sinav " + s);
+            const aciklama = item?.aciklama || "(Aciklama bulunamadi)";
+            ensureSpace(8 + 4*6 + 8);
+            writeTitle(baslik);
+            writeParagraph(aciklama);
+          }
+        }
 
-    writeParagraph(kapanis, 11, 5.5, 4.5);
+        // Meslekler
+        writeTitle("Uygun Meslekler");
+        if (!lastMeslekSayisi) {
+          writeParagraph("(Meslek sayisi hesaplanamadi.)");
+        } else if (!meslekYuklendi) {
+          writeParagraph("(meslek.json yuklenmedi)");
+        } else if (!lastMeslekObj) {
+          writeParagraph("Meslek Sayisi: " + String(lastMeslekSayisi) + "\n(Bu sayi icin meslek verisi bulunamadi.)");
+        } else {
+          const list = Array.isArray(lastMeslekObj.meslekler) ? lastMeslekObj.meslekler.join(", ") : "";
+          const acik = lastMeslekObj.aciklama || "";
+          writeParagraph("Meslek Sayisi: " + String(lastMeslekSayisi));
+          if (list) writeParagraph("Meslekler: " + list);
+          if (acik) writeParagraph("Aciklama: " + acik);
+        }
 
-    const fileName = (
-      nameSafe
-        ? nameSafe.replace(/\s+/g, "_").toLowerCase()
-        : "numeroloji"
-    ) + "_raporu.pdf";
-
-    doc.save(fileName);
-  } catch (e) {
-    console.error("PDF HATASI:", e);
-    alert("PDF üretilirken hata oldu. F12 > Console'a bak.");
-  }
-}
+        // 4. Yaşam Pusulası
+        writeTitle("Yaşam Pusulası");
+        if (!lastPin) {
+          writeParagraph("(Doğum tarihi girilmediği için yaşam pusulası hesaplanamadı.)");
+        } else if (!yasamPusulasiYuklendi) {
+          writeParagraph("(yasam_pusulasi.json yüklenmedi)");
+        } else {
+          const mapping = [
+            { key: "benlik_imaji", label: "Benlik İmajı", val: lastPin.h1 },
+            { key: "dis_dunyadaki_algi", label: "Dış Dünyadaki Algı", val: lastPin.h2 },
+            { key: "zorlanma_stratejisi", label: "Zorlanma Stratejisi", val: lastPin.h4 },
+            { key: "dengeyi_bulma", label: "Dengeyi Bulma", val: lastPin.h6 },
+            { key: "huzur_alani", label: "Huzur Alanı", val: lastPin.h7 },
+            { key: "guc_kaynagi", label: "Güç Kaynağı", val: lastPin.h8 }
+          ];
+          for (const m of mapping) {
+            const num = String(m.val);
+            const item = yasamPusulasiData?.[m.key]?.[num];
+            writeTitle(m.label + ": " + num);
+            if (!item) {
+              writeParagraph("(Bu sayı için yorum bulunamadı.)");
+            } else {
+              const t = item.baslik ? (item.baslik + "\n") : "";
+              const a = item.aciklama || "";
+              writeParagraph(t + a);
+            }
+          }
+        }
 
         /***********************
          * === EKLEME: RAPOR SONU KAPANIŞ METNİ ===
