@@ -733,22 +733,6 @@
           }
         }
 
-        function estimateCardHeight(title, body) {
-          const cardPadding = 5;
-          const safeTitle = safeText(title);
-          const safeBody = safeText(body || "");
-
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(11);
-          const titleLines = doc.splitTextToSize(safeTitle, contentWidth - cardPadding * 2);
-
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(10.5);
-          const bodyLines = doc.splitTextToSize(safeBody, contentWidth - cardPadding * 2);
-
-          return 6 + (titleLines.length * 5) + 2 + (bodyLines.length * 5.5) + 5;
-        }
-
         function writeInfoCard(title, body) {
           const cardPadding = 5;
           const safeTitle = safeText(title);
@@ -790,16 +774,6 @@
           doc.text(bodyLines, margin + cardPadding, innerY);
 
           y += cardHeight + 6;
-        }
-
-        function ensureSectionWithFirstCard(sectionTitle, firstCardTitle, firstCardBody) {
-          const sectionHeight = 14 + 11;
-          const firstCardHeight = estimateCardHeight(firstCardTitle, firstCardBody) + 6;
-          const totalNeed = sectionHeight + firstCardHeight + 2;
-
-          if (y + totalNeed > pageHeight - bottomMargin) {
-            startNewPage();
-          }
         }
 
         async function tryAddLogo() {
@@ -891,21 +865,12 @@
 
         drawDivider();
 
-        ensureSectionWithFirstCard(
-          "Hayat Amaci",
-          "Hayat Amaci Sayin: " + String(lastHayat),
-          hayatAmaciData[String(lastHayat)] || "(Hayat amaci yorumu bulunamadi.)"
-        );
         writeSectionTitle("Hayat Amaci");
         const hayatRaw = hayatAmaciData[String(lastHayat)] || "(Hayat amaci yorumu bulunamadi.)";
         writeInfoCard("Hayat Amaci Sayin: " + String(lastHayat), hayatRaw);
 
-        const odObj = odulData[String(lastOdul)] || {};
-        const odulFirstTitle = odObj.oz ? "Odulun Ozu" : (odObj.degisim ? "Hayatinda Nasil Bir Donusum Yaratir?" : "Odul Verisi");
-        const odulFirstBody = odObj.oz ? odObj.oz : (odObj.degisim ? odObj.degisim : "(Odul verisi bulunamadi.)");
-        ensureSectionWithFirstCard("Odul Enerjisi", odulFirstTitle, odulFirstBody);
         writeSectionTitle("Odul Enerjisi");
-
+        const odObj = odulData[String(lastOdul)] || {};
         if (odObj.oz) {
           writeInfoCard("Odulun Ozu", odObj.oz);
         }
@@ -916,20 +881,12 @@
           writeParagraph("(Odul verisi bulunamadi.)");
         }
 
+        writeSectionTitle("Sinav Aciklamalari");
         if (!lastSinavlar.length) {
-          writeSectionTitle("Sinav Aciklamalari");
           writeParagraph("(Sinav satiri yok.)");
         } else if (!sinavYuklendi) {
-          writeSectionTitle("Sinav Aciklamalari");
           writeParagraph("(sinav.json yuklenmedi)");
         } else {
-          const firstItem = sinavData[String(lastSinavlar[0])];
-          const firstBaslik = firstItem && firstItem.baslik ? firstItem.baslik : ("Sinav " + lastSinavlar[0]);
-          const firstAciklama = firstItem && firstItem.aciklama ? firstItem.aciklama : "(Aciklama bulunamadi)";
-
-          ensureSectionWithFirstCard("Sinav Aciklamalari", firstBaslik, firstAciklama);
-          writeSectionTitle("Sinav Aciklamalari");
-
           for (const s of lastSinavlar) {
             const item = sinavData[String(s)];
             const baslik = item && item.baslik ? item.baslik : ("Sinav " + s);
@@ -938,42 +895,28 @@
           }
         }
 
+        writeSectionTitle("Uygun Meslekler");
         if (!lastMeslekSayisi) {
-          writeSectionTitle("Uygun Meslekler");
           writeParagraph("(Meslek sayisi hesaplanamadi.)");
         } else if (!meslekYuklendi) {
-          writeSectionTitle("Uygun Meslekler");
           writeParagraph("(meslek.json yuklenmedi)");
         } else if (!lastMeslekObj) {
-          writeSectionTitle("Uygun Meslekler");
           writeParagraph("Meslek Sayisi: " + String(lastMeslekSayisi) + "\n\n(Bu sayi icin meslek verisi bulunamadi.)");
         } else {
           const list = Array.isArray(lastMeslekObj.meslekler) ? lastMeslekObj.meslekler.join(", ") : "";
           const acik = lastMeslekObj.aciklama || "";
-
-          ensureSectionWithFirstCard("Uygun Meslekler", "Meslek Sayisi", String(lastMeslekSayisi));
-          writeSectionTitle("Uygun Meslekler");
 
           writeInfoCard("Meslek Sayisi", String(lastMeslekSayisi));
           if (list) writeInfoCard("Destekleyen Meslek Alanlari", list);
           if (acik) writeInfoCard("Mesleki Yorum", acik);
         }
 
+        writeSectionTitle("Yasam Pusulasi");
         if (!lastPin) {
-          writeSectionTitle("Yasam Pusulasi");
           writeParagraph("(Dogum tarihi girilmedigi icin yasam pusulasi hesaplanamadi.)");
         } else if (!yasamPusulasiYuklendi) {
-          writeSectionTitle("Yasam Pusulasi");
           writeParagraph("(yasam_pusulasi.json yuklenmedi)");
         } else {
-          const firstNum = String(lastPin.h1);
-          const firstItem = yasamPusulasiData && yasamPusulasiData["benlik_imaji"] ? yasamPusulasiData["benlik_imaji"][firstNum] : null;
-          const firstTitle = "Benlik Imaji: " + firstNum;
-          const firstBody = firstItem ? ((firstItem.baslik ? firstItem.baslik + "\n\n" : "") + (firstItem.aciklama || "")) : "(Bu sayi icin yorum bulunamadi.)";
-
-          ensureSectionWithFirstCard("Yasam Pusulasi", firstTitle, firstBody);
-          writeSectionTitle("Yasam Pusulasi");
-
           const mapping = [
             { key: "benlik_imaji", label: "Benlik Imaji", val: lastPin.h1 },
             { key: "dis_dunyadaki_algi", label: "Dis Dunyadaki Algi", val: lastPin.h2 },
@@ -997,11 +940,6 @@
           }
         }
 
-        ensureSectionWithFirstCard(
-          "Kapanis Mesaji",
-          "Simurg",
-          "Bu rapor senin benzersiz titresimlerin ve ruhsal yolculugunun bir yansimasi olarak hazirlandi."
-        );
         writeSectionTitle("Kapanis Mesaji");
         writeParagraph(
           "Sevgili Simurg,\n\n" +
