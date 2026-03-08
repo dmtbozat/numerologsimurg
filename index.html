@@ -710,28 +710,34 @@
           y += 14;
         }
 
-        function writeParagraph(blockText, fontSize, lineHeight, gapAfter, color, indent) {
-          const fSize = typeof fontSize === "number" ? fontSize : 11;
-          const lHeight = typeof lineHeight === "number" ? lineHeight : 6;
-          const gAfter = typeof gapAfter === "number" ? gapAfter : 5;
-          const txtColor = color || COLORS.text;
-          const ind = typeof indent === "number" ? indent : 0;
+function writeParagraph(blockText, fontSize, lineHeight, gapAfter, color, indent) {
+  const fSize = typeof fontSize === "number" ? fontSize : 11;
+  const lHeight = typeof lineHeight === "number" ? lineHeight : 6;
+  const gAfter = typeof gapAfter === "number" ? gapAfter : 5;
+  const txtColor = color || COLORS.text;
+  const ind = typeof indent === "number" ? indent : 0;
 
-          const safe = safeText(blockText);
-          const paragraphs = safe.split("\n\n").map(function(p) { return p.trim(); }).filter(Boolean);
+  const safe = safeText(blockText);
+  const paragraphs = safe.split("\n\n").map(function(p) {
+    return p.trim();
+  }).filter(Boolean);
 
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(fSize);
-          doc.setTextColor.apply(doc, txtColor);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(fSize);
+  doc.setTextColor.apply(doc, txtColor);
 
-          for (const p of paragraphs) {
-            const lines = doc.splitTextToSize(p, contentWidth - ind);
-            const h = lines.length * lHeight + gAfter;
-            ensureSpace(h);
-            doc.text(lines, margin + ind, y);
-            y += lines.length * lHeight + gAfter;
-          }
-        }
+  for (const p of paragraphs) {
+    const lines = doc.splitTextToSize(p, contentWidth - ind);
+
+    for (const line of lines) {
+      ensureSpace(lHeight);
+      doc.text(line, margin + ind, y);
+      y += lHeight;
+    }
+
+    y += gAfter;
+  }
+}
 
         function writeInfoCard(title, body) {
           const cardPadding = 5;
